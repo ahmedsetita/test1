@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>فورم التسجيل</title>
+<style>
+  :root{
+    --ink:#1c2b2e;
+    --paper:#f6f3ec;
+    --line:#d8d2c2;
+    --accent:#2f6f5e;
+    --accent-dark:#1f4d40;
+    --danger:#b5473a;
+    --muted:#7a7266;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--paper);
+    font-family:'Tahoma','Segoe UI',sans-serif;
+    color:var(--ink);
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+  .card{
+    width:100%;
+    max-width:480px;
+    background:#fff;
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:32px 28px;
+    box-shadow:0 10px 30px rgba(31,77,64,0.08);
+  }
+  .eyebrow{
+    font-size:12px;
+    letter-spacing:1px;
+    color:var(--accent);
+    font-weight:700;
+    text-transform:uppercase;
+    margin-bottom:6px;
+  }
+  h1{
+    font-size:24px;
+    margin:0 0 6px;
+  }
+  .sub{
+    color:var(--muted);
+    font-size:14px;
+    margin-bottom:26px;
+    line-height:1.6;
+  }
+  label{
+    display:block;
+    font-size:13px;
+    font-weight:700;
+    margin:0 0 6px;
+    color:var(--ink);
+  }
+  .field{margin-bottom:18px;}
+  input[type=text], input[type=tel], input[type=email]{
+    width:100%;
+    padding:12px 14px;
+    border:1.5px solid var(--line);
+    border-radius:9px;
+    font-size:14px;
+    background:#fbfaf7;
+    font-family:inherit;
+    outline:none;
+    transition:.15s border-color;
+  }
+  input:focus{
+    border-color:var(--accent);
+  }
+  .file-drop{
+    border:1.5px dashed var(--line);
+    border-radius:9px;
+    padding:18px;
+    text-align:center;
+    background:#fbfaf7;
+    cursor:pointer;
+    font-size:13px;
+    color:var(--muted);
+    transition:.15s border-color, .15s background;
+  }
+  .file-drop.has-file{
+    border-color:var(--accent);
+    color:var(--accent-dark);
+    background:#eef6f2;
+  }
+  .file-drop input{display:none;}
+  button{
+    width:100%;
+    padding:13px;
+    border:none;
+    border-radius:9px;
+    background:var(--accent);
+    color:#fff;
+    font-size:15px;
+    font-weight:700;
+    cursor:pointer;
+    font-family:inherit;
+    transition:.15s background;
+  }
+  button:hover{background:var(--accent-dark);}
+  button:disabled{background:#b9c4c0;cursor:not-allowed;}
+  .msg{
+    margin-top:14px;
+    font-size:13px;
+    padding:10px 12px;
+    border-radius:8px;
+    display:none;
+    line-height:1.6;
+  }
+  .msg.ok{display:block;background:#eaf5ee;color:var(--accent-dark);border:1px solid #bfe2cd;}
+  .msg.err{display:block;background:#fbeceb;color:var(--danger);border:1px solid #eec7c2;}
+  .req{color:var(--danger);}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="eyebrow">التسجيل مفتوح</div>
+  <h1>سجّل بياناتك</h1>
+  <div class="sub">هنراجع طلبك ونبعتلك رد على إيميلك بعد المراجعة.</div>
+
+  <form id="regForm">
+    <div class="field">
+      <label>الاسم بالكامل <span class="req">*</span></label>
+      <input type="text" id="fullName" required placeholder="مثال: أحمد محمد">
+    </div>
+
+    <div class="field">
+      <label>رقم الموبايل <span class="req">*</span></label>
+      <input type="tel" id="phone" required placeholder="01xxxxxxxxx">
+    </div>
+
+    <div class="field">
+      <label>البريد الإلكتروني <span class="req">*</span></label>
+      <input type="email" id="email" required placeholder="name@example.com">
+    </div>
+
+    <div class="field">
+      <label>الملف المطلوب <span class="req">*</span></label>
+      <label class="file-drop" id="dropLabel">
+        <span id="dropText">اضغط هنا لاختيار ملف</span>
+        <input type="file" id="fileInput" required>
+      </label>
+    </div>
+
+    <button type="submit" id="submitBtn">إرسال التسجيل</button>
+    <div class="msg" id="msgBox"></div>
+  </form>
+</div>
+
+<script>
+// ضع هنا رابط الـ Webhook بتاع فورم n8n (Production URL)
+const WEBHOOK_URL = "https://n8n.srv1290114.hstgr.cloud/webhook/register-form";
+
+const form = document.getElementById('regForm');
+const fileInput = document.getElementById('fileInput');
+const dropLabel = document.getElementById('dropLabel');
+const dropText = document.getElementById('dropText');
+const submitBtn = document.getElementById('submitBtn');
+const msgBox = document.getElementById('msgBox');
+
+fileInput.addEventListener('change', () => {
+  if(fileInput.files.length){
+    dropLabel.classList.add('has-file');
+    dropText.textContent = "✓ " + fileInput.files[0].name;
+  }
+});
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  msgBox.className = 'msg';
+  msgBox.textContent = '';
+
+  const fullName = document.getElementById('fullName').value.trim();
+  const phone = document.getElementById('phone').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const file = fileInput.files[0];
+
+  if(!fullName || !phone || !email || !file){
+    msgBox.className = 'msg err';
+    msgBox.textContent = 'من فضلك املأ كل الحقول واختر ملف.';
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append('fullName', fullName);
+  formData.append('phone', phone);
+  formData.append('email', email);
+  formData.append('file', file);
+  formData.append('status', 'Pending');
+  formData.append('submittedAt', new Date().toISOString());
+
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'جاري الإرسال...';
+
+  try{
+    const res = await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      body: formData
+    });
+
+    if(!res.ok) throw new Error('server error');
+
+    msgBox.className = 'msg ok';
+    msgBox.textContent = 'تم إرسال طلبك بنجاح ✓ هيوصلك إيميل بعد المراجعة.';
+    form.reset();
+    dropLabel.classList.remove('has-file');
+    dropText.textContent = 'اضغط هنا لاختيار ملف';
+  }catch(err){
+    msgBox.className = 'msg err';
+    msgBox.textContent = 'حصل خطأ أثناء الإرسال. حاول تاني.';
+  }finally{
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'إرسال التسجيل';
+  }
+});
+</script>
+</body>
+</html>
